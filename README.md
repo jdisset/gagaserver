@@ -1,4 +1,4 @@
-#Install
+# Install
 
 Requires zeromq and boost to be installed.
 
@@ -9,9 +9,9 @@ Requires zeromq and boost to be installed.
 - `make`
 
 
-#Usage
+# Usage
 
-##gagaserver
+## gagaserver
 
 All dynamic parameters of gagaserver can be passed through the CLI. See
 src/config.hpp fo both static (the dna type) and dynamics parameters list.
@@ -25,7 +25,7 @@ The evolutionnary results will be written in ../evos by default
 If you want to use novelty, don't forget to `ga.enableNovelty()` in the
 main.cpp. See GAGA's readme for an exhaustive list of options.
 
-##client 
+## client 
 
 Client code is available for python (it should be easy to write other clients
 in any language that has a port of zeromq) in the client directory
