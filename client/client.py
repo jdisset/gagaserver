@@ -1,4 +1,5 @@
 from gagaworker import GAGAWorker
+import time
 
 
 
@@ -6,5 +7,5 @@ from gagaworker import GAGAWorker
 def maxSum(dnaList):
     return [{'fitnesses':{'sum':sum(i['values'])}} for i in dnaList]
 
-worker = GAGAWorker("tcp://localhost:4321", maxSum, batchSize = 20, identity = "pythonWorker")
+worker = GAGAWorker("tcp://localhost:4321", maxSum, batchSize = 20)
 worker.start()

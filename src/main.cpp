@@ -70,9 +70,9 @@ int main(int argc, char** argv) {
 	Config cfg;
 	cfg.parse(argc, argv);
 
-	GAGA::GA<dna_t> ga(argc, argv);
+	GAGA::GA<dna_t> ga;
 
-	auto rd = std::random_device();
+	std::random_device rd;
 	dna_t::getRandomEngine().seed(rd());
 
 	zmq::context_t context(1);
