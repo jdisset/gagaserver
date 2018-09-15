@@ -1,14 +1,16 @@
 #pragma once
-#include "metaconfig.hpp"
 #include <cxxopts.hpp>
+#include <gaga/dna/vectordna.hpp>
+#include "metaconfig.hpp"
 
 struct Config {
 	// ---------   STATIC CONFIG  ----------
-	using dna_t = GAGA::ArrayDNA<double, 10>;
+	using dna_t = GAGA::VectorDNA<double>;
 
 	// ---------   DYNAMIC CONFIG  ----------
-	DECLARE_CONFIG(Config, (std::string, port), (size_t, popSize), (double, mutationRate),
-	               (double, crossoverRate), (int, verbosity), (int, nbGenerations))
+	DECLARE_CONFIG(Config, (dna_t::Config, DNACfg), (std::string, port), (size_t, popSize),
+	               (double, mutationRate), (double, crossoverRate), (int, verbosity),
+	               (int, nbGenerations))
 
 	Config() {
 		// default values:

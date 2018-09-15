@@ -22,7 +22,7 @@ class GAGAWorker:
             strRep = self.socket.recv()
             rep = json.loads(strRep)
             if rep['req'] == 'EVAL':
-                dnaList = [json.loads(i['dna']) for i in rep['individuals']]
+                dnaList = [i['dna'] for i in rep['individuals']]
                 results = self.evaluationFunc(dnaList)
                 assert len(results) == len(dnaList)
                 individuals = []
@@ -31,7 +31,6 @@ class GAGAWorker:
                     ind.update(r)
                     individuals.append(ind)
                 reply = {'req':'RESULT', 'individuals':individuals}
-                # print(reply)
                 self.socket.send(bytes(json.dumps(reply)))
                 self.socket.recv() #ACK
 
