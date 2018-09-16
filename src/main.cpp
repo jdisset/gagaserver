@@ -130,12 +130,33 @@ int main(int argc, char** argv) {
 	zmq::context_t context(1);
 	zmq::socket_t socket(context, ZMQ_ROUTER);
 	socket.bind(cfg.port);
+
 	ga.setEvaluateFunction([&]() { distributedEvaluate(ga, socket); });
+
 	ga.setPopSize(cfg.popSize);
 	ga.setMutationRate(cfg.mutationRate);
 	ga.setCrossoverRate(cfg.crossoverRate);
 	ga.setVerbosity(cfg.verbosity);
-	ga.initPopulation([&]() { return dna_t::random(&(cfg.DNACfg)); });
+	ga.setSaveFolder(cfg.saveFolder);
+	ga.setNbThreads(cfg.nbThreads);
+
+	ga.setPopSaveInterval(cfg.popSaveInterval);
+	ga.setGenSaveInterval(cfg.genSaveInterval);
+	ga.setSaveParetoFront(cfg.saveParetoFront);
+	ga.setSaveIndStats(cfg.saveIndividualStats);
+	ga.setSaveGenStats(cfg.saveGenerationStats);
+
+	if (cfg.enableNovelty)
+		ga.enableNovelty();
+	else
+		ga.disableNovelty();
+
+	if (cfg.saveNoveltyArchive)
+		ga.enableArchiveSave();
+	else
+		ga.disableArchiveSave();
+
+	ga.initPopulation([&]() { return dna_t::random(&(cfg.DNA)); });
 	ga.step(cfg.nbGenerations);
 	terminate(socket);
 	return 0;

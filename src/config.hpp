@@ -6,11 +6,16 @@
 struct Config {
 	// ---------   STATIC CONFIG  ----------
 	using dna_t = GAGA::VectorDNA<double>;
+	// the dna also has its own config (cf. its header file)
 
 	// ---------   DYNAMIC CONFIG  ----------
-	DECLARE_CONFIG(Config, (dna_t::Config, DNACfg), (std::string, port), (size_t, popSize),
+	DECLARE_CONFIG(Config, (dna_t::Config, DNA), (std::string, port), (size_t, popSize),
 	               (double, mutationRate), (double, crossoverRate), (int, verbosity),
-	               (int, nbGenerations))
+	               (int, nbGenerations), (std::string, saveFolder), (bool, enableNovelty),
+	               (size_t, nbThreads), (bool, saveNoveltyArchive),
+	               (size_t, popSaveInterval), (size_t, genSaveInterval),
+	               (bool, saveGenerationStats), (bool, saveIndividualStats),
+	               (bool, saveParetoFront))
 
 	Config() {
 		// default values:
@@ -20,5 +25,14 @@ struct Config {
 		crossoverRate = 0.5;
 		verbosity = 2;
 		nbGenerations = 10;
+		saveFolder = "../evos/";
+		enableNovelty = false;
+		nbThreads = 1;
+		saveNoveltyArchive = true;
+		popSaveInterval = 1;
+		genSaveInterval = 1;
+		saveGenerationStats = true;
+		saveIndividualStats = false;
+		saveParetoFront = true;
 	}
 };
