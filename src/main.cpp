@@ -9,7 +9,6 @@ using dna_t = Config::dna_t;
 
 static int s_interrupted = 0;
 static void s_signal_handler(int) { s_interrupted = 1; }
-
 static void s_catch_signals() {
 	struct sigaction action;
 	action.sa_handler = s_signal_handler;
@@ -120,6 +119,7 @@ int main(int argc, char** argv) {
 		cfg.loadFromFile(configPath);
 	}
 
+	//cfg.save("default_config.cfg");
 	// cfg.parse(argc, argv);
 
 	GAGA::GA<dna_t> ga;

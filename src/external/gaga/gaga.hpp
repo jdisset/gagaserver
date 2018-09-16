@@ -230,6 +230,9 @@ template <typename DNA, typename footprint_t = doubleMat> class GA {
 	void setTournamentSize(size_t n) { tournamentSize = n; }
 	void setPopSaveInterval(unsigned int n) { savePopInterval = n; }
 	void setGenSaveInterval(unsigned int n) { saveGenInterval = n; }
+	void setSaveParetoFront(bool m) { doSaveParetoFront = m; }
+	void setSaveGenStats(bool m) { doSaveGenStats = m; }
+	void setSaveIndStats(bool m) { doSaveIndStats = m; }
 	void setSaveFolder(string s) { folder = s; }
 	void setNbThreads(unsigned int n) {
 		if (n >= nbThreads)
@@ -283,9 +286,6 @@ template <typename DNA, typename footprint_t = doubleMat> class GA {
 
 	bool getEvaluateAllIndividuals() { return evaluateAllIndividuals; }
 	void setEvaluateAllIndividuals(bool m) { evaluateAllIndividuals = m; }
-	void setSaveParetoFront(bool m) { doSaveParetoFront = m; }
-	void setSaveGenStats(bool m) { doSaveGenStats = m; }
-	void setSaveIndStats(bool m) { doSaveIndStats = m; }
 
 	// main current and previous population containers
 	vector<Ind_t> population;
@@ -1581,7 +1581,7 @@ template <typename DNA, typename footprint_t = doubleMat> class GA {
 		fileName << baseName.str() << "/pop" << currentGeneration << ".pop";
 		std::ofstream file;
 		file.open(fileName.str());
-		file << o.dump();
+		file << o.dump(1);
 		file.close();
 	}
 	void saveArchive() {
@@ -1594,7 +1594,7 @@ template <typename DNA, typename footprint_t = doubleMat> class GA {
 		fileName << baseName.str() << "/archive" << currentGeneration << ".pop";
 		std::ofstream file;
 		file.open(fileName.str());
-		file << o.dump();
+		file << o.dump(1);
 		file.close();
 	}
 };

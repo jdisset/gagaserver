@@ -24,7 +24,7 @@ struct Config {
 		mutationRate = 0.5;
 		crossoverRate = 0.5;
 		verbosity = 2;
-		nbGenerations = 10;
+		nbGenerations = 200;
 		saveFolder = "../evos/";
 		enableNovelty = false;
 		nbThreads = 1;
