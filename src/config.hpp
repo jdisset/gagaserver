@@ -19,6 +19,6 @@ struct Config {
 		mutationRate = 0.5;
 		crossoverRate = 0.5;
 		verbosity = 2;
-		nbGenerations = 400;
+		nbGenerations = 10;
 	}
 };

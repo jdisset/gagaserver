@@ -33,5 +33,10 @@ class GAGAWorker:
                 reply = {'req':'RESULT', 'individuals':individuals}
                 self.socket.send(bytes(json.dumps(reply)))
                 self.socket.recv() #ACK
+            elif rep['req'] == 'STOP':
+                print("Received STOP request, exiting")
+                break;
+            else :
+                print("[WARNING] Received unknown request:",strRep)
 
 

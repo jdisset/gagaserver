@@ -60,9 +60,12 @@ template <typename T> struct VectorDNA {
 
 	void mutate() {
 		assert(cfg);
-		size_t action =
-		    chooseAction(std::vector<T>{{cfg->modifyProba, cfg->addProba, cfg->eraseProba}},
-		                 getRandomEngine());
+		size_t action = 0; // default = modify
+		if (cfg->mutateSize) {
+			action =
+			    chooseAction(std::vector<T>{{cfg->modifyProba, cfg->addProba, cfg->eraseProba}},
+			                 getRandomEngine());
+		}
 		std::uniform_real_distribution<T> d(0, 1);  // TODO replace by generic rand
 		std::uniform_int_distribution<int> dInt(0, values.size() - 1);
 		switch (action) {
@@ -86,6 +89,7 @@ template <typename T> struct VectorDNA {
 	static VectorDNA random(Config* c) {
 		assert(c);
 		VectorDNA res(c);
+		res.values.resize(c->initialSize);
 		std::uniform_real_distribution<T> d(0, 1);  // TODO replace by generic rand
 		for (size_t i = 0; i < c->initialSize; ++i) res.values[i] = d(getRandomEngine());
 		return res;

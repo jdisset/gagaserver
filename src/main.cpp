@@ -8,7 +8,7 @@
 using dna_t = Config::dna_t;
 
 static int s_interrupted = 0;
-static void s_signal_handler(int signal_value) { s_interrupted = 1; }
+static void s_signal_handler(int) { s_interrupted = 1; }
 
 static void s_catch_signals() {
 	struct sigaction action;
@@ -20,6 +20,30 @@ static void s_catch_signals() {
 }
 
 std::queue<request_t> readyRequests;  // ready requests are stored here when waiting
+
+void terminate(zmq::socket_t& socket) {
+	std::cerr << "Terminating server, sending STOP signal to all workers" << std::endl;
+	// we send a stop to all workers
+	int timeout = 300;
+	zmq_setsockopt(socket, ZMQ_RCVTIMEO, &timeout, sizeof(int));
+	// first we check if some workers are still sending stuff
+	zmq::message_t message;
+	while (socket.recv(&message)) {
+		// a worker has sent its identity
+		std::string id(static_cast<char*>(message.data()), message.size());
+		recv(socket);
+		json j = recvJson(socket);
+		// we add it to the readyRequests (even if it's not a ready request...)
+		readyRequests.push(std::make_pair(id, j));
+	}
+	// then we go through all readyRequests and tell the senders to stop working
+	while (readyRequests.size() > 0) {
+		auto r = readyRequests.front();
+		readyRequests.pop();
+		json j = {{"req", "STOP"}};
+		sendJson(socket, r.first, j);
+	}
+}
 
 template <typename G> void distributedEvaluate(G& ga, zmq::socket_t& socket) {
 	std::unordered_set<size_t> toEvaluate;  // id of individuals to evaluate
@@ -82,6 +106,7 @@ template <typename G> void distributedEvaluate(G& ga, zmq::socket_t& socket) {
 		}
 		if (s_interrupted) {
 			std::cout << "W: killing server…" << std::endl;
+			terminate(socket);
 			exit(0);
 		}
 	}
@@ -112,5 +137,6 @@ int main(int argc, char** argv) {
 	ga.setVerbosity(cfg.verbosity);
 	ga.initPopulation([&]() { return dna_t::random(&(cfg.DNACfg)); });
 	ga.step(cfg.nbGenerations);
+	terminate(socket);
 	return 0;
 }
