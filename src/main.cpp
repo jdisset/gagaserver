@@ -42,6 +42,7 @@ void terminate(zmq::socket_t& socket) {
 		json j = {{"req", "STOP"}};
 		sendJson(socket, r.first, j);
 	}
+	zmq_close(socket);
 }
 
 template <typename G> void distributedEvaluate(G& ga, zmq::socket_t& socket) {
@@ -119,7 +120,7 @@ int main(int argc, char** argv) {
 		cfg.loadFromFile(configPath);
 	}
 
-	//cfg.save("default_config.cfg");
+	// cfg.save("default_config.cfg");
 	// cfg.parse(argc, argv);
 
 	GAGA::GA<dna_t> ga;
