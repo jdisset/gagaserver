@@ -21,6 +21,7 @@ class GAGAWorker:
             self.socket.send(bytes(json.dumps(req)))
             strRep = self.socket.recv()
             rep = json.loads(strRep)
+            print("sent READY request")
             if rep['req'] == 'EVAL':
                 dnaList = [i['dna'] for i in rep['individuals']]
                 results = self.evaluationFunc(dnaList)
@@ -32,6 +33,7 @@ class GAGAWorker:
                     individuals.append(ind)
                 reply = {'req':'RESULT', 'individuals':individuals}
                 self.socket.send(bytes(json.dumps(reply)))
+                print("sent RESULT request")
                 self.socket.recv() #ACK
             elif rep['req'] == 'STOP':
                 print("Received STOP request, exiting")

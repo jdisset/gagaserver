@@ -1,14 +1,20 @@
+#include <chrono>
 #include <csignal>
 #include <gaga/gaga.hpp>
 #include <iostream>
+#include <queue>
 #include <string>
+#include <unordered_set>
 #include "config.hpp"
 #include "helper.hpp"
 
 using dna_t = Config::dna_t;
-
+using namespace std::chrono_literals;
 static int s_interrupted = 0;
-static void s_signal_handler(int) { s_interrupted = 1; }
+static void s_signal_handler(int) {
+	s_interrupted = 1;
+	std::cerr << "sig" << std::endl;
+}
 static void s_catch_signals() {
 	struct sigaction action;
 	action.sa_handler = s_signal_handler;
@@ -19,12 +25,21 @@ static void s_catch_signals() {
 }
 
 std::queue<request_t> readyRequests;  // ready requests are stored here when waiting
+std::unordered_set<std::string> workingWorkers;  // list of currently working clients
 
-void terminate(zmq::socket_t& socket) {
+void terminate(zmq::context_t& context, zmq::socket_t& socket) {
 	std::cerr << "Terminating server, sending STOP signal to all workers" << std::endl;
+	json stop = {{"req", "STOP"}};
 	// we send a stop to all workers
-	int timeout = 300;
+	int timeout = 400;
 	zmq_setsockopt(socket, ZMQ_RCVTIMEO, &timeout, sizeof(int));
+	// same for all working workers
+	for (const auto& w : workingWorkers) {
+		sendJson(socket, w, stop);
+		sendJson(socket, w, stop);
+		std::cerr << "working : " << w << std::endl;
+	}
+	workingWorkers.clear();
 	// first we check if some workers are still sending stuff
 	zmq::message_t message;
 	while (socket.recv(&message)) {
@@ -35,17 +50,28 @@ void terminate(zmq::socket_t& socket) {
 		// we add it to the readyRequests (even if it's not a ready request...)
 		readyRequests.push(std::make_pair(id, j));
 	}
+
 	// then we go through all readyRequests and tell the senders to stop working
+	std::cerr << readyRequests.size() << " ready, " << workingWorkers.size() << " working."
+	          << std::endl;
 	while (readyRequests.size() > 0) {
 		auto r = readyRequests.front();
 		readyRequests.pop();
-		json j = {{"req", "STOP"}};
-		sendJson(socket, r.first, j);
+		std::cerr << "ready : " << r.first << std::endl;
+		sendJson(socket, r.first, stop);
+		recvString(socket);
+		sendJson(socket, r.first, stop);
 	}
-	zmq_close(socket);
+	socket.close();
+	context.close();
 }
 
-template <typename G> void distributedEvaluate(G& ga, zmq::socket_t& socket) {
+template <typename G>
+void distributedEvaluate(G& ga, zmq::context_t& context, zmq::socket_t& socket) {
+	if (workingWorkers.size() > 0)
+		std::cerr << "[WARNING] non empty working client list at begining of evaluation"
+		          << std::endl;
+	workingWorkers.clear();
 	std::unordered_set<size_t> toEvaluate;  // id of individuals to evaluate
 	for (size_t i = 0; i < ga.population.size(); ++i)
 		if (ga.getEvaluateAllIndividuals() || !ga.population[i].evaluated)
@@ -54,7 +80,6 @@ template <typename G> void distributedEvaluate(G& ga, zmq::socket_t& socket) {
 	size_t waitingFor = toEvaluate.size();
 	ga.printLn(3, toEvaluate.size(), " evaluations ready to be distributed");
 
-	s_catch_signals();
 	while (waitingFor > 0) {
 		try {
 			if (toEvaluate.size() > 0 && readyRequests.size() > 0) {
@@ -72,15 +97,20 @@ template <typename G> void distributedEvaluate(G& ga, zmq::socket_t& socket) {
 				}
 				json j = {{"req", "EVAL"}, {"individuals", dnas}};
 				sendJson(socket, request.first, j);
+				workingWorkers.insert(request.first);
 				ga.printLn(3, "Sending \"", request.first, "\" ", qtty, " DNA for evaluation");
 			} else {
 				auto request = recvRequest(socket);
 				auto& req = request.second;
 				if (req.at("req") == "READY") {  // we save for the next iteration
 					readyRequests.push(request);
-					ga.printLn(3, "Received READY");
+					ga.printLn(3, "Received READY from ", request.first);
 				} else if (req.at("req") == "RESULT") {  // we need to update the individuals
-					ga.printLn(3, "Received RESULT");
+					if (!workingWorkers.count(request.first))
+						std::cerr << "[WARNING] An unknown worker just sent a result." << std::endl;
+					else
+						workingWorkers.erase(request.first);
+					ga.printLn(3, "Received RESULT from ", request.first);
 					auto individuals = req.at("individuals");
 					for (auto& i : individuals) {
 						auto id = i.at("id");
@@ -102,11 +132,10 @@ template <typename G> void distributedEvaluate(G& ga, zmq::socket_t& socket) {
 				}
 			}
 		} catch (zmq::error_t& e) {
-			std::cout << "W: interrupt received, proceeding…" << std::endl;
+			std::cout << "W: interrupt received" << std::endl;
 		}
 		if (s_interrupted) {
-			std::cout << "W: killing server…" << std::endl;
-			terminate(socket);
+			terminate(context, socket);
 			exit(0);
 		}
 	}
@@ -132,7 +161,7 @@ int main(int argc, char** argv) {
 	zmq::socket_t socket(context, ZMQ_ROUTER);
 	socket.bind(cfg.port);
 
-	ga.setEvaluateFunction([&]() { distributedEvaluate(ga, socket); });
+	ga.setEvaluateFunction([&]() { distributedEvaluate(ga, context, socket); });
 
 	ga.setPopSize(cfg.popSize);
 	ga.setMutationRate(cfg.mutationRate);
@@ -157,8 +186,9 @@ int main(int argc, char** argv) {
 	else
 		ga.disableArchiveSave();
 
+	s_catch_signals();
 	ga.initPopulation([&]() { return dna_t::random(&(cfg.DNA)); });
 	ga.step(cfg.nbGenerations);
-	terminate(socket);
+	terminate(context, socket);
 	return 0;
 }
