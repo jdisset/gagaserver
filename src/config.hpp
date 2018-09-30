@@ -1,7 +1,7 @@
 #pragma once
 #include <cxxopts.hpp>
 #include <gaga/dna/vectordna.hpp>
-#include "metaconfig.hpp"
+#include <metaconfig/metaconfig.hpp>
 
 struct Config {
 	// ---------   STATIC CONFIG  ----------

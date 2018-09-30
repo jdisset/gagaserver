@@ -1,7 +1,7 @@
 #pragma once
+#include <metaconfig/metaconfig.hpp>
 #include <random>
 #include <vector>
-#include "../../../metaconfig.hpp"
 #include "../include/json.hpp"
 
 namespace GAGA {
@@ -60,7 +60,7 @@ template <typename T> struct VectorDNA {
 
 	void mutate() {
 		assert(cfg);
-		size_t action = 0; // default = modify
+		size_t action = 0;  // default = modify
 		if (cfg->mutateSize) {
 			action =
 			    chooseAction(std::vector<T>{{cfg->modifyProba, cfg->addProba, cfg->eraseProba}},
@@ -101,7 +101,7 @@ template <typename T> struct VectorDNA {
 	}
 
 	VectorDNA crossover(const VectorDNA& other) {  // fixed point crossover
-		assert(*(other.cfg) == *cfg);
+		assert((*(other.cfg)).to_json() == (*cfg).to_json());
 		VectorDNA res(cfg);
 		for (size_t i = 0; i < values.size() / 2; ++i) res.values.push_back(values[i]);
 		for (size_t i = other.values.size() / 2; i < other.values.size(); ++i)
