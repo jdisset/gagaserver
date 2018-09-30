@@ -14,6 +14,7 @@ static int s_interrupted = 0;
 static void s_signal_handler(int) {
 	s_interrupted = 1;
 	std::cerr << "sig" << std::endl;
+	throw std::runtime_error("interrupted");
 }
 static void s_catch_signals() {
 	struct sigaction action;
@@ -131,8 +132,9 @@ void distributedEvaluate(G& ga, zmq::context_t& context, zmq::socket_t& socket) 
 					sendStr(socket, request.first, "");
 				}
 			}
-		} catch (zmq::error_t& e) {
-			std::cout << "W: interrupt received" << std::endl;
+		} catch (...) {
+			std::cout << "Exception was raised, aborting" << std::endl;
+			s_interrupted = 1;
 		}
 		if (s_interrupted) {
 			terminate(context, socket);
@@ -150,7 +152,7 @@ int main(int argc, char** argv) {
 	}
 
 	// cfg.save("default_config.cfg");
-	// cfg.parse(argc, argv);
+	cfg.parse(argc, argv);
 
 	GAGA::GA<dna_t> ga;
 
@@ -162,6 +164,17 @@ int main(int argc, char** argv) {
 	socket.bind(cfg.port);
 
 	ga.setEvaluateFunction([&]() { distributedEvaluate(ga, context, socket); });
+
+	ga.setComputeFootprintDistanceFunction([](const auto& fpA, const auto& fpB) {
+		// sum of squared distances
+		// assuming footprint_t is vector<vector<double>>
+		assert(fpA.size() == fpB.size());
+		double dist = 0;
+		for (size_t i = 0; i < fpA.size(); ++i)
+			for (size_t j = 0; j < fpA[i].size(); ++j)
+				dist += std::pow(fpA[i][j] - fpB[i][j], 2);
+		return dist;
+	});
 
 	ga.setPopSize(cfg.popSize);
 	ga.setMutationRate(cfg.mutationRate);
