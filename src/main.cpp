@@ -68,7 +68,9 @@ void terminate(zmq::context_t& context, zmq::socket_t& socket) {
 }
 
 template <typename G>
-void distributedEvaluate(G& ga, zmq::context_t& context, zmq::socket_t& socket) {
+void distributedEvaluate(
+    G& ga, zmq::context_t& context, zmq::socket_t& socket,
+    json extra = {}) {  // extra is sent to the workers with each EVAL re
 	if (workingWorkers.size() > 0)
 		std::cerr << "[WARNING] non empty working client list at begining of evaluation"
 		          << std::endl;
@@ -151,9 +153,12 @@ int main(int argc, char** argv) {
 		cfg.loadFromFile(configPath);
 	}
 
-	// cfg.save("default_config.cfg");
-	cfg.parse(argc, argv);
+	cfg.save("default_config.cfg");
+	//cfg.parse(argc, argv);
+	cfg.save("read_config.cfg");
 
+	std::cerr << "novelty = " << cfg.enableNovelty << std::endl;
+	std::cerr << "saveIndividualStates= " << cfg.saveIndividualStats << std::endl;
 	GAGA::GA<dna_t> ga;
 
 	std::random_device rd;

@@ -1,5 +1,5 @@
-#ifndef METACONFIG_HPP
-#define METACONFIG_HPP
+#pragma once
+
 #include <boost/hana.hpp>
 #include <cstring>
 #include <fstream>
@@ -92,7 +92,22 @@ class Argv {
 		std::ofstream fs(file);                                                             \
 		fs << print();                                                                      \
 		fs.close();                                                                         \
-	}
+	}                                                                                     \
+                                                                                        \
+	bool operator==(const N& n) { return (to_json() == n.to_json()); }                    \
+	bool operator!=(const N& n) { return !(*this == n); }
+
+/*                                                     \*/
+// bool operator==(const N& n) {
+// constexpr auto accessors = boost::hana::accessors<N>();
+// bool result = true;
+// boost::hana::for_each(boost::hana::transform(accessors, [](auto a) { return a; }),
+//[&](auto p) {
+// constexpr auto getMember = boost::hana::second(p);
+// if (getMember(*this) != getMember(n)) result = false;
+//});
+// return result;
+//}
 
 #define METACONFIG_DECLARE_PARSABLE(N)                                                \
 	void parse(int argc, char** argv) {                                                 \
@@ -139,9 +154,10 @@ class Argv {
 		                  cxxopts::value<std::remove_reference_t<decltype(t)>>(t));       \
 	}
 
+
 #define DECLARE_CONFIG_BODY(N)            \
 	METACONFIG_DECLARE_SERIALIZABLE_BODY(N) \
-	METACONFIG_DECLARE_PARSABLE(N)
+	 METACONFIG_DECLARE_PARSABLE(N)
 
 #define DECLARE_SERIALIZABLE(N, ...)        \
 	BOOST_HANA_DEFINE_STRUCT(N, __VA_ARGS__); \
@@ -154,4 +170,3 @@ class Argv {
 #define DECLARE_CONFIG_WITH_DEFAULT(N, ...) \
 	TUN_DEFINE_STRUCT(N, __VA_ARGS__);        \
 	DECLARE_CONFIG_BODY(N)
-#endif
