@@ -1,0 +1,3 @@
+[submodule "src/external/gaga"]
+	path = src/external/gaga
+	url = git@github.com:jdisset/gaga.git
