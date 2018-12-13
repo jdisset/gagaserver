@@ -153,12 +153,6 @@ int main(int argc, char** argv) {
 		cfg.loadFromFile(configPath);
 	}
 
-	cfg.save("default_config.cfg");
-	//cfg.parse(argc, argv);
-	cfg.save("read_config.cfg");
-
-	std::cerr << "novelty = " << cfg.enableNovelty << std::endl;
-	std::cerr << "saveIndividualStates= " << cfg.saveIndividualStats << std::endl;
 	GAGA::GA<dna_t> ga;
 
 	std::random_device rd;
@@ -206,7 +200,13 @@ int main(int argc, char** argv) {
 
 	s_catch_signals();
 	ga.initPopulation([&]() { return dna_t::random(&(cfg.DNA)); });
-	ga.step(cfg.nbGenerations);
+
+	SQLiteSaver saver(cfg.SQLiteSaveFile);
+	if (cfg.SQLiteSaveEnabled) saver.createTables();
+	for (size_t i = 0; i < cfg.nbGenerations; ++i) {
+		ga.step();
+		if (cfg.SQLiteSaveEnabled) saver.newGen(ga);
+	}
 	terminate(context, socket);
 	return 0;
 }
