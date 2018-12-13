@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 
 project(gagaserver)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -Wall -Wextra -pedantic -g")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
@@ -18,7 +18,11 @@ file(GLOB SRC
 find_package(ZMQ REQUIRED)
 find_package(Boost REQUIRED)
 
+
 set(EXE gagaserver)
 add_executable(${EXE} ${SRC} src/main.cpp)
-target_include_directories(${EXE} PUBLIC ${ZeroMQ_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS})
-target_link_libraries(${EXE} PUBLIC ${ZeroMQ_LIBRARIES})
+
+find_package (SQLite3 REQUIRED)
+
+target_include_directories(${EXE} PUBLIC ${ZeroMQ_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${SQLITE3_INCLUDE_DIRS})
+target_link_libraries(${EXE} PUBLIC ${SQLITE3_LIBRARIES} ${ZeroMQ_LIBRARIES})
