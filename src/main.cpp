@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include "config.hpp"
 #include "helper.hpp"
+#include "sqlitesave.hpp"
 
 using dna_t = Config::dna_t;
 using namespace std::chrono_literals;
@@ -76,45 +77,64 @@ void distributedEvaluate(
 		          << std::endl;
 	workingWorkers.clear();
 	std::unordered_set<size_t> toEvaluate;  // id of individuals to evaluate
-	for (size_t i = 0; i < ga.population.size(); ++i)
-		if (ga.getEvaluateAllIndividuals() || !ga.population[i].evaluated)
+	for (size_t i = 0; i < ga.population.size(); ++i) {
+		if (ga.getEvaluateAllIndividuals() || !ga.population[i].evaluated) {
 			toEvaluate.insert(i);
+			ga.population[i].wasAlreadyEvaluated = false;
+		} else {
+			ga.population[i].evalTime = 0.0;
+			ga.population[i].wasAlreadyEvaluated = true;
+		}
+	}
 
-	size_t waitingFor = toEvaluate.size();
+	size_t waitingFor = toEvaluate.size();  // number of individual still to be received
 	ga.printLn(3, toEvaluate.size(), " evaluations ready to be distributed");
 
 	while (waitingFor > 0) {
 		try {
 			if (toEvaluate.size() > 0 && readyRequests.size() > 0) {
-				auto request = readyRequests.front();
+				// we have some individuals left to evaluate AND some workers ready
+				auto request = readyRequests.front();  // a READY request
 				readyRequests.pop();
-				auto& req = request.second;
-				size_t qtty = 1u;  // size of dna batch
-				if (req.count("qtty"))
+
+				auto& req = request.second;  // req = the body of the request
+
+				size_t qtty = 1u;       // default size of dna batch is 1
+				if (req.count("qtty"))  // a worker can ask for different size via qtty
 					qtty = std::min(toEvaluate.size(), req.at("qtty").get<size_t>());
-				std::vector<json> dnas;
+
+				std::vector<json> dnas;  // list of dnas (+id +extra) to this req for evaluation
 				for (size_t i = 0; i < qtty; ++i) {
 					size_t indId = *toEvaluate.begin();
 					toEvaluate.erase(indId);
-					dnas.push_back({{"id", indId}, {"dna", ga.population[indId].dna.serialize()}});
+					dnas.push_back({{"id", indId},
+					                {"dna", ga.population[indId].dna.serialize()},
+					                {"extra", extra}});
 				}
-				json j = {{"req", "EVAL"}, {"individuals", dnas}};
+
+				json j = {{"req", "EVAL"}, {"individuals", dnas}};  // the reply
 				sendJson(socket, request.first, j);
-				workingWorkers.insert(request.first);
+				workingWorkers.insert(request.first);  // add the worker's to the working list
 				ga.printLn(3, "Sending \"", request.first, "\" ", qtty, " DNA for evaluation");
 			} else {
 				auto request = recvRequest(socket);
 				auto& req = request.second;
-				if (req.at("req") == "READY") {  // we save for the next iteration
+				if (req.at("req") == "READY") {
+					// a worker is ready: we save its request for the next iteration
 					readyRequests.push(request);
 					ga.printLn(3, "Received READY from ", request.first);
-				} else if (req.at("req") == "RESULT") {  // we need to update the individuals
-					if (!workingWorkers.count(request.first))
+				} else if (req.at("req") == "RESULT") {
+					// a worker is done evaluating some individuals. we need to update them
+					if (!workingWorkers.count(request.first)) {
 						std::cerr << "[WARNING] An unknown worker just sent a result." << std::endl;
-					else
+						// really, this shouldn't happen...
+					} else {
 						workingWorkers.erase(request.first);
+					}
+
 					ga.printLn(3, "Received RESULT from ", request.first);
 					auto individuals = req.at("individuals");
+
 					for (auto& i : individuals) {
 						auto id = i.at("id");
 						if (i.count("fitnesses"))
@@ -202,6 +222,10 @@ int main(int argc, char** argv) {
 	ga.initPopulation([&]() { return dna_t::random(&(cfg.DNA)); });
 
 	SQLiteSaver saver(cfg.SQLiteSaveFile);
+	if (cfg.SQLiteSaveEnabled) {
+		saver.createTables();
+		saver.newRun(cfg.print());
+	}
 	if (cfg.SQLiteSaveEnabled) saver.createTables();
 	for (size_t i = 0; i < cfg.nbGenerations; ++i) {
 		ga.step();
