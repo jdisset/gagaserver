@@ -116,7 +116,7 @@ struct SQLiteSaver {
 
 		if (generationNumber == 0) {  // insert objectives
 			std::string sql =
-			    "INSERT INTO objectives"
+			    "INSERT INTO objective"
 			    "(name, type, id_run) "
 			    "VALUES "
 			    "(?1, ?2, ?3);";
